@@ -1,6 +1,7 @@
 library(ISLR)
 
 #Bootstramp é um forma de validação que constitui em criar novas amostras baseado nos dados originais
+# Usados em modelo de randow forrest
 
 #Função que calcula o alpha
 alpha.fn = function(data, index){
