@@ -1,4 +1,5 @@
 library(ISLR)
+library(leaps)
 
 reg.fit.fwd = regsubsets(Salary~.,data=Hitters,nvmax=19,method="forward")
 summary(reg.fit.fwd)
