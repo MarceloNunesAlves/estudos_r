@@ -70,3 +70,70 @@ par(mfrow=c(1,1))
 plot(mean.cv.errors,type='b')
 reg.best=regsubsets(Salary~.,data=Hitters, nvmax=19)
 coef(reg.best,11)
+
+#Lab 2 Rigde Regression and the Lasso
+
+# Este processo efetua a dummização do dataset pois o metodo glmnet só trabalha com numeros
+x=model.matrix(Salary~.,Hitters)[,-1]
+y=Hitters$Salary
+
+#Carregar biblioteca
+library(glmnet)
+#Sequencia de lambda que será utilizada
+grid=10^seq(10,-2,length=100)
+#Por padrão os valores serão normalizados, caso não queria (standardize=FALSE)
+ridge.mod=glmnet(x,y,apha=0,lambda=grid)
+
+dim(coef(ridge.mod))
+
+# Quanto menor for o coeficiente maior será o lambda
+ridge.mod$lambda[50]
+
+coef(ridge.mod)[,50]
+
+sqrt(sum(coef(ridge.mod)[-1,50]^2))
+
+# Quanto menor for o coeficiente maior será o lambda
+ridge.mod$lambda[60]
+
+coef(ridge.mod)[,60]
+
+sqrt(sum(coef(ridge.mod)[-1,60]^2))
+
+predict(ridge.mod,s=50,type = "coefficients")[1:20,]
+
+# Separação de dados de treino e teste 
+set.seed(1)
+train=sample(1:nrow(x), nrow(x)/2)
+test=(-train)
+y.test=y[test]
+
+# Efetuado o treinamento com lambda=4 e utilizando os dados de teste para a validação
+rigde.mod=glmnet(x[train,],y[train],alpha=0,lambda=grid,thresh=1e-12)
+rigde.pred=predict(ridge.mod,s=4,newx=x[test,])
+mean((rigde.pred-y.test)^2)
+
+
+rigde.pred=predict(ridge.mod,s=1e10,newx=x[test,])
+mean((rigde.pred-y.test)^2)
+
+rigde.pred=predict(rigde.mod,s=0,newx=x[test,],exact=T,x=x[train,],y=y[train])
+mean((ridge.pred-y.test)^2)
+lm(y~x,subset=train)
+predict(rigde.mod,s=0,exact=T,type="coefficients",x=x[train,],y=y[train])[1:20,]
+
+# Validação kfold para selecionar o melhor lambda
+set.seed(1)
+cv.out=cv.glmnet(x[train,],y[train],alpha=0)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+bestlam
+
+ridge.pred=predict(ridge.mod,s=bestlam,newx=x[test,])
+mean((rigde.pred-y.test)^2)
+
+#Após selecionar o melhor lambda é só aplicar no dataset completo
+out=glmnet(x,y,alpha=0)
+predict(out,type="coefficients",s=bestlam)[1:20,]
+
+# The lasso
