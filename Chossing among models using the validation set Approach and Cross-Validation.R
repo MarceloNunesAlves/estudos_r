@@ -137,3 +137,63 @@ out=glmnet(x,y,alpha=0)
 predict(out,type="coefficients",s=bestlam)[1:20,]
 
 # The lasso
+lasso.mod = glmnet(x[train,],y[train],alpha=1,lambda=grid)
+# Alguns coeficientes ficaram proximo de zero
+plot(lasso.mod)
+
+# Lasso com cross-validation
+set.seed(1)
+cv.out=cv.glmnet(x[train,],y[train],alpha=1)
+plot(cv.out)
+
+# O melhor valor de alpha
+bestlam=cv.out$lambda.min
+lasso.pred=predict(lasso.mod, s=bestlam, newx=x[test,])
+mean((lasso.pred-y.test)^2)
+
+out = glmnet(x,y,alpha=1,lambda = grid)
+lasso.coef=predict(out,type="coefficients",s=bestlam)[1:20,]
+# Dos 19 campos 12 estão com o zerado
+lasso.coef
+# Os campos que serão utilizado na predição
+lasso.coef[lasso.coef!=0]
+
+# Principal components regression
+library(pls)
+set.seed(2)
+# scale=TRUE => Para normalizar os dados preditor / validation="CV" kfolds
+pcr.fit=pcr(Salary~., data=Hitters, scale=TRUE, validation="CV")
+
+# as composições de campos criados
+summary(pcr.fit)
+
+# Gráfico com o cross-validation
+validationplot(pcr.fit,val.type="MSEP")
+
+# Selecionando um quantidade especifica de components.
+# Por exemplo M=1 => 38,31% de toda a variacia - M=6 => 88,63 - M=19 => 100%
+set.seed(1)
+pcr.fit=pcr(Salary~., data=Hitters, scale=TRUE, validation="CV")
+validationplot(pcr.fit,val.type="MSEP")
+
+# Test com apenas 7 components
+pcr.pred=predict(pcr.fit,x[test,],ncomp=7)
+mean((pcr.pred-y.test)^2)
+
+# Treino com apenas 7 componentes
+pcr.fit=pcr(y~x,scale=TRUE,ncomp=7)
+summary(pcr.fit)
+
+# Partial least squares
+set.seed(1)
+pls.fit=plsr(Salary~., data=Hitters,subset=train,scale=TRUE,validation="CV")
+summary(pls.fit)
+validationplot(pls.fit,val.type="MSEP")
+
+# Neste dataset foi retornado a quantidade de 2 com a maior performance
+pls.pred=predict(pls.fit,x[test,],ncomp=2)
+mean((pls.pred-y.test)^2)
+
+# Treinando apenas com 2 componentes
+pls.fit=plsr(Salary~., data=Hitters,subset=train,scale=TRUE,ncomp=2)
+summary(pls.fit)
