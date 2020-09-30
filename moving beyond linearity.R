@@ -127,3 +127,56 @@ lines(age.grid,predict(fit,data.frame(age=age.grid)),col="red",lwd=2)
 lines(age.grid,predict(fit2,data.frame(age=age.grid)),col="blue",lwd=2)
 legend('topright', legend=c("Span=0.2", "Span=0.5"), col=c("red", "blue"), lty=1, lwd=2, cex=.8)
 # O resultado consiste em 20% ou 50% das observações. Quanto maior for a extensão, mais suave será o ajuste
+
+# GAM
+
+# Primeiro será utilizado uma abordagem com as colunas year, age e education
+# 4 graus pra ano e 5 para idade
+gam1=lm(wage~ns(year,4)+ns(age,5)+education,data=Wage)
+
+library(gam)
+gam.m3=gam(wage~s(year,4)+s(age,5)+education,data=Wage)
+
+par(mfrow=c(1,3))
+#Apresenta o comportamente de cada variavel na predição
+
+# Utilizando o metodo GAM
+plot(gam.m3, se=TRUE, col="blue")
+
+# Utilizando o metodo LM
+plot.Gam(gam1, se=TRUE, col="red")
+
+# Utilizando a metodologia de analise ANOVA pode verificar qual combinação será mais eficiente
+gam.m1=gam(wage~s(age,5)+education,data=Wage)
+gam.m2=gam(wage~year+s(age,5)+education,data=Wage)
+anova(gam.m1,gam.m2,gam.m3,test="F")
+#O resultado aponta que o melhor modelo é M2, com o ano (year) sem graus de liberdade
+
+# Analisando o modelo 3
+summary(gam.m3)
+
+# Como pode se ver no resultado o ano com graus de liberdade apresenta uma p-value muito alto
+
+## Previsão
+preds = predict(gam.m2, newdata=Wage)
+
+# Fit com a Função lo()
+gam.lo=gam(wage~s(year,df=4)+lo(age,span=0.7)+education,data=Wage)
+plot.Gam(gam.lo, se=TRUE, col="green")
+
+gam.lo.i=gam(wage~lo(year,age,span=0.5)+education,data=Wage)
+
+library(akima)
+plot(gam.lo.i)
+
+#Para utilizar regressão logistica, basta colocar a função I()
+gam.lr=gam(I(wage>250)~year+s(age,df=5)+education, family=binomial, data=Wage)
+par(mfrow=c(1,3))
+plot(gam.lr, se=TRUE, col="green")
+
+# Uma forma facil de analisar o desempenho de uma variavel dummy e ver se não há grandes ganhadores, atraves do codigo abaixo:
+table(education,I(wage>250))
+
+# Realizando um novo treinamento sem uma das categorias na analise
+gam.lr=gam(I(wage>250)~year+s(age,df=5)+education, family=binomial, data=Wage,subset=(education!="1. < HS Grad"))
+plot(gam.lr, se=TRUE, col="green")
