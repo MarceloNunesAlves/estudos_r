@@ -67,4 +67,91 @@ tree.pred=predict(prune.carseats,Carseats.test,type="class")
 table(tree.pred,High.test)
 (102+53)/200
 
-# Fitting Regression Trees
+# Fitting Regression Trees (Regressão linear com dataset Boston)
+library(MASS)
+set.seed(1)
+train = sample(1:nrow(Boston), nrow(Boston)/2)
+tree.boston = tree(medv~.,Boston,subset=train)
+summary(tree.boston)
+
+# Visualizar a arvore criada
+plot(tree.boston)
+text(tree.boston, pretty=0)
+
+# Agora utilizando cross-validation
+cv.boston=cv.tree(tree.boston)
+plot(cv.boston$size,cv.boston$dev,type='b')
+
+# Testar com apenas os 5 melhores nós
+prune.boston=prune.tree(tree.boston,best=5)
+plot(prune.boston)
+text(prune.boston, pretty=0)
+
+# Testando com os dados de teste - 35.28 (Melhor)
+yhat = predict(tree.boston,newdata = Boston[-train,])
+boston.test = Boston[-train,"medv"]
+plot(yhat, boston.test)
+abline(0,1)
+mean((yhat-boston.test)^2)
+
+# Com prune a taxa é maior 35.90
+yhat = predict(prune.boston,newdata = Boston[-train,])
+boston.test = Boston[-train,"medv"]
+plot(yhat, boston.test)
+abline(0,1)
+mean((yhat-boston.test)^2)
+
+# Bagging and Ramdom Forests
+library(randomForest)
+set.seed(1)
+# O argumento mtry indica que deverá ser utilizado todos os 13 campos preditores
+bag.boston=randomForest(medv~.,data = Boston,subset = train, mtry=13, importance = TRUE)
+bag.boston
+
+# Testando os dados com o processo de Bagging (23.59)
+yhat.bag = predict(bag.boston,newdata=Boston[-train,])
+plot(yhat.bag, boston.test)
+abline(0,1)
+mean((yhat.bag-boston.test)^2)
+
+# Limitando o numero de arvores ntree (22.53)
+bag.boston=randomForest(medv~.,data = Boston,subset = train, mtry=13, ntree=25, importance = TRUE)
+yhat.bag = predict(bag.boston,newdata=Boston[-train,])
+mean((yhat.bag-boston.test)^2)
+
+# Utilizando menos mtry (19.54)
+rf.boston=randomForest(medv~.,data = Boston,subset = train, mtry=6, importance = TRUE)
+yhat.bag = predict(rf.boston,newdata=Boston[-train,])
+mean((yhat.bag-boston.test)^2)
+
+# Analisar a importancia de cada variavel
+importance(rf.boston)
+
+# Vendo gráficamente
+varImpPlot(rf.boston)
+
+# Nesta analise podemos notar que as variaves mais importante na predição são as rm e lstat
+
+
+# Boosting
+# Para problemas de regressão linear deve se usar a distribution="gaussian", ou para classificação distribution="bernoulli"
+library(gbm)
+set.seed(1)
+boost.boston = gbm(medv~.,data=Boston[train,],distribution="gaussian", n.trees = 5000,interaction.depth = 4)
+#5000 arvores e com a profundidade maxima de 4
+
+# Neste sumario é possivel visualizar que as variaveis lstats e rm são mais importantes
+summary(boost.boston)
+
+#Esta analise mostra que o preço medio da casa cresce com o rm e diminui com lstat
+par(mfrow=c(1,2))
+plot(boost.boston, i="rm")
+plot(boost.boston, i="lstat")
+
+yhat.boost = predict(boost.boston, newdata = Boston[-train,], n.trees=5000)
+mean((yhat.boost-boston.test)^2)
+
+#Talvez alterando o paramtro de lambda posso obter uma taxa de erro menor (default=0.0001) => 0.2
+boost.boston = gbm(medv~.,data=Boston[train,],distribution="gaussian", n.trees = 5000,interaction.depth = 4, shrinkage = 0.2, verbose=F)
+yhat.boost = predict(boost.boston, newdata = Boston[-train,], n.trees=5000)
+mean((yhat.boost-boston.test)^2)
